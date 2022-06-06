@@ -1,0 +1,19 @@
+{
+    "Profile_name": { 
+        "protocol": "https",
+        "host": "127.0.0.1",
+        "port": 30603,
+        "cw_user": "username",
+        "cw_pass": "password",
+        "device_file": "./files/devices_template.csv",
+        "config_template_file": "./files/config_template.txt",
+        "vouchers_folder": "./files/vouchers/",
+        "device_version": "7.4.2",
+        "device_family": "CISCO NCS540",
+        "device_OS": "IOS XR",
+        "credential_profile": "device_profile",
+        "is_secure_ztp": "true",
+        "image_name": "NCS540-GISO-7.4.2-v2",
+        "provider_name": "NSO_CNC"
+    }
+}
