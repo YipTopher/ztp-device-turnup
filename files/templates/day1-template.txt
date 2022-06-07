@@ -66,22 +66,22 @@ logging suppress duplicates
 service timestamps log datetime localtime msec show-timezone
 service timestamps debug datetime localtime msec show-timezone
 logging events link-status software-interfaces
-
+!
 ntp
  authenticate
- authentication-key 1 md5 clear admin
+ authentication-key 1 md5 encrypted 15130F010D24
  trusted-key 1
  ipv4 dscp cs7
-
+!
 ssh server v2
 ssh client vrf VRF-OMSWR-00001
 ssh client source-interface Loopback1
 ssh server dscp 56
 ssh server session-limit 15
 ssh server vrf VRF-OMSWR-00001
-
+!
 hw-module profile qos hqos-enable
-
+!
 call-home
  vrf VRF-OMSWR-00001
  service active
@@ -95,12 +95,10 @@ call-home
    no destination address http https://tools.cisco.com/its/service/oddce/services/DDCEService
   reporting smart-call-home-data
   reporting smart-licensing-data
-
-http client vrf VRF-OMSWR-00001
-http client source-interface ipv4 Loopback1
-
+!
+!
 cef adjacency route override rib
-
+!
 !
 snmp-server ipv4 dscp cs7
 snmp-server user CNC1 USR-GRP-SNMP-RO-00001 v3 auth sha encrypted 05080F1C22430F584B56 priv aes 128 encrypted 0822455D0A1644464058 SystemOwner
@@ -123,47 +121,47 @@ snmp-server traps syslog
 snmp-server traps system
 snmp-server location CALO
 snmp-server trap-source Loopback1
-
+!
 bfd
  multipath include location 0/0/CPU0
-
+!
 extcommunity-set opaque EXT-COMM-ODN-EGP-COLOR
   1000 co-flag 01
 end-set
-
+!
 ipv4 access-list ACL-SNMP-RO-00001
  10  permit ipv4 172.16.206.0/24 host {{SWR_LOOPBACK1_IPADDRR}}
-
-
+!
+!
 prefix-set PFL-CONNECTED-TO-BGP-L1-SWR
   {{SWR_LOOPBACK1_IPADDRR}}
 end
-
+!
 class-map match-all CMP-ENBV100-SWR-SIGNALLING-EDGE-INGRESS-00001
  match cos 6
  match dscp cs5
  end-class-map
-
- class-map match-all CMP-ENBV100-SWR-TC1-EDGE-INGRESS-00001
+!
+class-map match-all CMP-ENBV100-SWR-TC1-EDGE-INGRESS-00001
  match cos 5
  match dscp ef
  end-class-map
-
- class-map match-any CMP-ENBV100-SWR-RDM-EDGE-INGRESS-00001
+!
+class-map match-any CMP-ENBV100-SWR-RDM-EDGE-INGRESS-00001
  match cos 3
  end-class-map
-
+!
 class-map match-all CMP-ENBV100-SWR-TC4-EDGE-INGRESS-00001
  match cos 0
  match dscp af13
  end-class-map
-
+!
 policy-map PMP-ENBV100-SWR-CHILD-INGRESS-00001
  class CMP-ENBV100-SWR-SIGNALLING-EDGE-INGRESS-00001
   set traffic-class 1
   set qos-group 1
   set forward-class  5
- 
+ !
  class CMP-ENBV100-SWR-TC1-EDGE-INGRESS-00001
   set traffic-class 2
   set qos-group 2
@@ -173,231 +171,233 @@ policy-map PMP-ENBV100-SWR-CHILD-INGRESS-00001
   set traffic-class 3
   set qos-group 3
   set forward-class  5
- 
+ !
  class CMP-ENBV100-SWR-TC4-EDGE-INGRESS-00001
   set traffic-class 4
   set qos-group 4
   set forward-class  4
- 
+ !
  class class-default
- 
+ !
  end-policy-map
-
+!
 class-map match-all CMP-ENBV100-SWR-SIGNALLING-EDGE-EGRESS-00001
 match traffic-class 1  
 end-class-map
-
+!
 class-map match-all CMP-ENBV100-SWR-TC1-EDGE-EGRESS-00001
 match traffic-class 2
 end-class-map
- 
- class-map match-any CMP-ENBV100-SWR-RDM-EDGE-EGRESS-00001
+! 
+class-map match-any CMP-ENBV100-SWR-RDM-EDGE-EGRESS-00001
  match traffic-class 3
  end-class-map
-
+!
 class-map match-all CMP-ENBV100-SWR-TC4-EDGE-EGRESS-00001
-match traffic-class 4
+ match traffic-class 4
  end-class-map
-
+!
 policy-map PMP-ENBV100-SWR-CHILD-EGRESS-00001
  description  PMP-ENBV100-SWR-CHILD-EGRESS-POLICY
-
-class CMP-ENBV100-SWR-SIGNALLING-EDGE-EGRESS-00001
+ !
+ class CMP-ENBV100-SWR-SIGNALLING-EDGE-EGRESS-00001
     priority level 1
      shape average percent 3
      queue-limit 500 us
-
-class CMP-ENBV100-SWR-TC1-EDGE-EGRESS-00001
+ !
+ class CMP-ENBV100-SWR-TC1-EDGE-EGRESS-00001
     priority level 2
      shape average percent 20
      queue-limit 500 us
-
-class CMP-ENBV100-SWR-RDM-EDGE-EGRESS-00001
+ !
+ class CMP-ENBV100-SWR-RDM-EDGE-EGRESS-00001
   bandwidth percent 3
-
-class CMP-ENBV100-SWR-TC4-EDGE-EGRESS-00001
+ !
+ class CMP-ENBV100-SWR-TC4-EDGE-EGRESS-00001
   bandwidth percent 97
-
-class-map match-all CMP-ENBV101-SWR-TCM-EDGE-INGRESS-00001
+ !
+ class-map match-all CMP-ENBV101-SWR-TCM-EDGE-INGRESS-00001
  match cos 6
  end-class-map
-
+!
 policy-map PMP-ENBV101-SWR-CHILD-INGRESS-00001
  class CMP-ENBV101-SWR-TCM-EDGE-INGRESS-00001
   set traffic-class 5
   set qos-group 5
-
+ !
  class class-default
  end-policy-map
-
+!
 class-map match-all CMP-MPLS-SWR-NC-CORE-INGRESS-00001
 match mpls experimental topmost 7
 end-class-map
-
+!
 class-map match-all CMP-MPLS-SWR-SIGNALLING-CORE-INGRESS-00001
 match mpls experimental topmost 3
 end-class-map
-
- class-map match-all CMP-MPLS-SWR-TC1-CORE-INGRESS-00001
+!
+class-map match-all CMP-MPLS-SWR-TC1-CORE-INGRESS-00001
  match mpls experimental topmost 5
  end-class-map
-
- class-map match-any CMP-MPLS-SWR-RDM-CORE-INGRESS-00001
-match mpls experimental topmost 4
+!
+class-map match-any CMP-MPLS-SWR-RDM-CORE-INGRESS-00001
+ match mpls experimental topmost 4
  end-class-map
-
+!
 class-map match-all CMP-MPLS-SWR-TC4-CORE-INGRESS-00001
 match mpls experimental topmost 2
  end-class-map
-
+!
 class-map match-all CMP-MPLS-SWR-TCM-OMRAN-CORE-INGRESS-00001
 match mpls experimental topmost 1
  end-class-map
-
+!
 policy-map PMP-MPLS-SWR-CHILD-CORE-INGRESS-00001
-class CMP-MPLS-SWR-NC-CORE-INGRESS-00001
+ class CMP-MPLS-SWR-NC-CORE-INGRESS-00001
   set traffic-class 7
   set qos-group 7
-
-class CMP-MPLS-SWR-SIGNALLING-CORE-INGRESS-00001
+ !
+ class CMP-MPLS-SWR-SIGNALLING-CORE-INGRESS-00001
   set traffic-class 1
   set qos-group 1
-
-class CMP-MPLS-SWR-TC1-CORE-INGRESS-00001
+ !
+ class CMP-MPLS-SWR-TC1-CORE-INGRESS-00001
   set traffic-class 2
   set qos-group 2
-
-class CMP-MPLS-SWR-RDM-CORE-INGRESS-00001
+ !
+ class CMP-MPLS-SWR-RDM-CORE-INGRESS-00001
   set traffic-class 3
   set qos-group 3
-
-class CMP-MPLS-SWR-TC4-CORE-INGRESS-00001
+ !
+ class CMP-MPLS-SWR-TC4-CORE-INGRESS-00001
   set traffic-class 4
   set qos-group 4
-
-class CMP-MPLS-SWR-TCM-OMRAN-CORE-INGRESS-00001
+ !
+ class CMP-MPLS-SWR-TCM-OMRAN-CORE-INGRESS-00001
   set traffic-class 5
   set qos-group 5
-
+ !
+ end-policy-map
+!
 class-map match-any CMP-MPLS-SWR-NC-CORE-MARKING-EGRESS-0001
  match qos-group 7
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-SIGNALLING-CORE-MARKING-EGRESS-00001
  match qos-group 1
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-TC1-CORE-MARKING-EGRESS-00001
  match qos-group 2
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-RDM-CORE-MARKING-EGRESS-00001
  match qos-group 3
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-TC4-CORE-MARKING-EGRESS-00001
  match qos-group 4
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-TCM-OMRAN-CORE-MARKING-EGRESS-00001
  match qos-group 5
  end-class-map
-
+!
 policy-map PMP-MPLS-SWR-CORE-EGRESS-CHILD-MARKING-00001
  class CMP-MPLS-SWR-NC-CORE-MARKING-EGRESS-0001
   set cos 7
   set mpls experimental imposition 7
-
+ !
  class CMP-MPLS-SWR-SIGNALLING-CORE-MARKING-EGRESS-00001
   set cos 6
   set mpls experimental imposition 3
-
+ !
  class CMP-MPLS-SWR-TC1-CORE-MARKING-EGRESS-00001
   set cos 5
   set mpls experimental imposition 5
-
+ !
  class CMP-MPLS-SWR-RDM-CORE-MARKING-EGRESS-00001
   set cos 3
   set mpls experimental imposition 4
-
+ !
  class CMP-MPLS-SWR-TC4-CORE-MARKING-EGRESS-00001
   set cos 0
   set mpls experimental imposition 2
-
+ !
  class CMP-MPLS-SWR-TCM-OMRAN-CORE-MARKING-EGRESS-00001
   set cos 6
   set mpls experimental imposition 1
-
+ !
  class class-default
  end-policy-map
-
+!
 class-map match-any CMP-MPLS-SWR-NC-CORE-EGRESS-0001
  match traffic-class 7
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-SIGNALLING-CORE-EGRESS-00001
  match traffic-class 1
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-TC1-CORE-EGRESS-00001
  match traffic-class 2
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-RDM-CORE-EGRESS-00001
  match traffic-class 3
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-TC4-CORE-EGRESS-00001
  match traffic-class 4
  end-class-map
-
+!
 class-map match-any CMP-MPLS-SWR-TCM-OMRAN-CORE-EGRESS-00001
  match traffic-class 5
  end-class-map
-
-
+!
+!
 policy-map PMP-MPLS-SWR-CORE-EGRESS-CHILD-QUEUING-00001
   class CMP-MPLS-SWR-NC-CORE-EGRESS-0001
   priority level 1
   shape average percent 5
   queue-limit 500 us
-
+!
  class CMP-MPLS-SWR-SIGNALLING-CORE-EGRESS-00001
   priority level 2
   shape average percent 3
   queue-limit 500 us
-
+!
  class CMP-MPLS-SWR-TC1-CORE-EGRESS-00001
   priority level 3
   shape average percent 20
   queue-limit 500 us
-
+!
  class CMP-MPLS-SWR-RDM-CORE-EGRESS-00001
   bandwidth percent 2
-
+!
  class CMP-MPLS-SWR-TCM-OMRAN-CORE-EGRESS-00001
   bandwidth percent 3
-
+!
  class CMP-MPLS-SWR-TC4-CORE-EGRESS-00001
   bandwidth percent 95
-
+!
  class class-default
-
+!
  end-policy-map
-
+!
 policy-map PMP-MPLS-SWR-CORE-EGRESS-PARENT-QUEUING-00001
  class class-default
   service-policy PMP-MPLS-SWR-CORE-EGRESS-CHILD-QUEUING-00001
   shape average 1000 mbps
  end-policy-map
-
+!
 telemetry model-driven
  destination-group DESTINATION_GROUP_1
   vrf VRF-OMSWR-00001
   address-family ipv4 192.168.131.121 port 9010
    encoding self-describing-gpb
    protocol tcp
-
+!
 sensor-group SENSORGRP_CFM
 sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/nodes/node/bandwidth-notifications
 sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/nodes/node/bandwidth-notifications/bandwidth-notification
@@ -407,9 +407,8 @@ sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/nodes/node/ccm-learning-databases
 sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/global-configuration-errors/global-configuration-error
 sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/mep-configuration-errors/mep-configuration-error
 sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/local-meps/local-mep
-sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/peer-me-pv2s/peer-me-pv2
-  
-
+sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/peer-me-pv2s/peer-me-pv2 
+!
 sensor-group SENSORGRP_MPLS
 sensor-path Cisco-IOS-XR-mpls-te-oper:mpls-te/segment-routing/srigp-area-infos/srigp-area-info
 sensor-path Cisco-IOS-XR-mpls-te-oper:mpls-te/segment-routing/sr-node-infos/sr-node-info
@@ -419,8 +418,7 @@ sensor-path Cisco-IOS-XR-mpls-te-oper:mpls-te/auto-tunnel/pcc/summary
 sensor-path Cisco-IOS-XR-mpls-te-oper:mpls-te/igp-areas/igp-area
 sensor-path Cisco-IOS-XR-mpls-te-oper:mpls-te/topology/global
 sensor-path Cisco-IOS-XR-mpls-te-oper:mpls-te/topology/destination-paths/destination-path
-
-
+!
 sensor-group SENSORGRP_TC
 sensor-path Cisco-IOS-XR-infra-tc-oper:traffic-collector/vrf-table/default-vrf/afs/af/counters/prefixes/prefix
 sensor-path  Cisco-IOS-XR-infra-tc-oper:traffic-collector/summary-oc-aft
@@ -431,7 +429,7 @@ sensor-path  Cisco-IOS-XR-infra-tc-oper:traffic-collector/vrf-table/default-vrf/
 sensor-path  Cisco-IOS-XR-infra-tc-oper:traffic-collector/afs/af/counters/labels/label
 sensor-path  Cisco-IOS-XR-infra-tc-oper:traffic-collector/afs/af/counters/prefixes/prefix
 sensor-path  Cisco-IOS-XR-infra-tc-oper:traffic-collector/afs/af/counters/tunnels/tunnel
-
+!
 sensor-group SENSORGRP_BFD
 sensor-path Cisco-IOS-XR-ip-bfd-oper:bfd/summary
 sensor-path Cisco-IOS-XR-ip-bfd-oper:bfd/summary/session-state/total-count
@@ -441,7 +439,7 @@ sensor-path Cisco-IOS-XR-ip-bfd-oper:bfd/ip-single-hop-session-details/ip-single
 sensor-path Cisco-IOS-XR-ip-bfd-oper:bfd/ip-single-hop-session-details/ip-single-hop-session-detail/status-information
 sensor-path Cisco-IOS-XR-ip-bfd-oper:bfd/ip-single-hop-session-details/ip-single-hop-session-detail/owner-information
 sensor-path Cisco-IOS-XR-ip-bfd-oper:bfd/ipv4-single-hop-counters/ipv4-single-hop-packet-counters/ipv4-single-hop-packet-counter
-
+!
 sensor-group SENSORGRP_QOS
 sensor-path Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/general-stats/total-drop-rate
 sensor-path Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/output/service-policy-names/service-policy-instance/statistics/class-stats/general-stats/total-drop-rate
@@ -454,7 +452,7 @@ sensor-path Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service
 sensor-path Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/output/service-policy-names/service-policy-instance/statistics/class-stats/child-policy/class-stats/general-stats/transmit-bytes
 sensor-path Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/input/service-policy-names/service-policy-instance/statistics/class-stats/child-policy/class-stats/general-stats/pre-policy-matched-bytes
 sensor-path Cisco-IOS-XR-qos-ma-oper:qos/interface-table/interface/output/service-policy-names/service-policy-instance/statistics/class-stats/child-policy/class-stats/general-stats/pre-policy-matched-bytes
-
+!
 sensor-group SENSORGRP_BGP
 sensor-path Cisco-IOS-XR-ipv4-bgp-oper:bgp/instances/instance/instance-active/default-vrf/afs/af/neighbor-af-table/neighbor/update-messages-in
 sensor-path Cisco-IOS-XR-ipv4-bgp-oper:bgp/instances/instance/instance-active/default-vrf/afs/af/neighbor-af-table/neighbor/negotiated-protocol-version
@@ -472,7 +470,7 @@ sensor-path Cisco-IOS-XR-ipv4-bgp-oper:bgp/instances/instance/instance-active/de
 sensor-path Cisco-IOS-XR-ipv4-bgp-oper:bgp/instances/instance/instance-active/default-vrf/afs/af/neighbor-af-table/neighbor/af-data/max-prefix-limit
 sensor-path Cisco-IOS-XR-ipv4-bgp-oper:bgp/instances/instance/instance-active/default-vrf/neighbor-missing-eor-table/neighbor/last-notify-error-code
 sensor-path Cisco-IOS-XR-ipv4-bgp-oper:bgp/instances/instance/instance-active/default-vrf/afs/af/neighbor-af-table/neighbor/update-messages-out
-
+!
 sensor-group SENSORGRP_ISIS
 sensor-path Cisco-IOS-XR-clns-isis-oper:isis/instances/instance/levels/level/adjacencies
 sensor-path Cisco-IOS-XR-clns-isis-oper:isis/instances/instance/levels/level/adjacencies/adjacency/adjacency-system-id
@@ -482,15 +480,14 @@ sensor-path Cisco-IOS-XR-clns-isis-oper:isis/instances/instance/neighbors/neighb
 sensor-path Cisco-IOS-XR-clns-isis-oper:isis/instances/instance/neighbors/neighbor
 sensor-path Cisco-IOS-XR-clns-isis-oper:isis/instances/instance/neighbors/neighbor/neighbor-per-address-family-data/ipv4/next-hop
 sensor-path Cisco-IOS-XR-clns-isis-oper:isis/instances/instance/neighbors/neighbor/neighbor-state
-
+!
 sensor-group SENSORGRP_CDP
 sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/neighbors/details/detail
 sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/neighbors/devices/device
 sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/neighbors/summaries/summary
 sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/statistics
-sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/interfaces/interface
-   
-
+sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/interfaces/interface 
+!
 sensor-group SENSORGRP_EVPN
 sensor-path Cisco-IOS-XR-evpn-oper:evpn/nodes/node/evpn-groups/evpn-group
 sensor-path Cisco-IOS-XR-evpn-oper:evpn/nodes/node/remote-shgs/remote-shg
@@ -502,10 +499,10 @@ sensor-path Cisco-IOS-XR-evpn-oper:evpn/active/remote-shgs/remote-shg
 sensor-path Cisco-IOS-XR-evpn-oper:evpn/active/evis/evi
 sensor-path Cisco-IOS-XR-evpn-oper:evpn/active/summary
 sensor-path Cisco-IOS-XR-evpn-oper:evpn/active/ethernet-segments/ethernet-segment
-
+!
 sensor-group SENSORGRP_GNSS
 sensor-path Cisco-IOS-XR-gnss-oper:gnss-receiver/nodes/node/receivers/receiver
-
+!
 sensor-group SENSORGRP_INTERFACE
 sensor-path Cisco-IOS-XR-pfi-im-cmd-oper:interfaces/interface-xr/interface
 sensor-path Cisco-IOS-XR-pfi-im-cmd-oper:interfaces/node-type-sets/node-type-set/interface-summary
@@ -528,7 +525,7 @@ sensor-path Cisco-IOS-XR-infra-statsd-oper:infra-statistics/interfaces/interface
 sensor-path Cisco-IOS-XR-infra-statsd-oper:infra-statistics/interfaces/interface/interfaces-mib-counters
 sensor-path Cisco-IOS-XR-infra-statsd-oper:infra-statistics/interfaces/interface/data-rate
 sensor-path Cisco-IOS-XR-infra-statsd-oper:infra-statistics/interfaces/interface/generic-counters
-
+!
  subscription SUB_To_DG1
   sensor-group-id SENSORGRP_CFM sample-interval 300000
   sensor-group-id SENSORGRP_TUNNEL sample-interval 300000
@@ -543,39 +540,39 @@ sensor-path Cisco-IOS-XR-infra-statsd-oper:infra-statistics/interfaces/interface
   sensor-group-id SENSORGRP_INTERFACE sample-interval 300000 
   destination-id DESTINATION_GROUP_1
   source-interface Loopback1
-
-
+!
+!
 taskgroup TSK-GRP-ADMIN-00001
  task write basic-services
  task execute basic-services
  inherit taskgroup root-lr
  inherit taskgroup cisco-support
  description full administrative control
-
-
+!
+!
 usergroup USR-GRP-ADMIN-00001
  taskgroup TSK-GRP-ADMIN-00001
  description ericsson admin users
-
-
-
-
+!
+!
 tcp ao
  keychain KCH-SRPCE-00001
   key 1 SendID 1 ReceiveID 1
-
-key chain KCH-ISIS-00001
+!
+!
+ key chain KCH-ISIS-00001
  key 1
   accept-lifetime 12:00:00 july 01 2014 12:00:00 july 01 2034
-  key-string clear admin123
+  key-string password 053B0901386956190B0004015A5E57
   send-lifetime 12:00:00 july 01 2014 12:00:00 july 01 2034
   cryptographic-algorithm HMAC-MD5
+ !
  !
 !
 key chain KCH-SRPCE-00001
  key 1
   accept-lifetime 12:00:00 july 01 2014 12:00:00 july 01 2034
-  key-string clear admin123
+  key-string password 053B0901386956190B0004015A5E57
   send-lifetime 12:00:00 july 01 2014 12:00:00 july 01 2034
   cryptographic-algorithm AES-128-CMAC-96
 
@@ -624,18 +621,18 @@ router bgp 65503
   bfd fast-detect
   bfd multiplier 3
   bfd minimum-interval 50
-  keychain KCH-SWRBGP-00001
+  password encrypted 08114340103C1D07000E1F177B7977
   update-source Loopback0
   dscp cs7
   address-family vpnv4 unicast
    route-policy RMP-PASS-IN-00001 in
    maximum-prefix 524288 75 warning-only
    route-policy RMP-PASS-OUT-00001 out
-
-
+!
+!
   address-family l2vpn evpn
    advertise l2vpn evpn
-
+!
  neighbor  {{LWR1_LOOPBACK0_IP_ADDR}}
   use neighbor-group BGP-NBR-SWR-LWR-65503-00001 
   description LWR1
@@ -643,7 +640,7 @@ router bgp 65503
  neighbor {{LWR2_LOOPBACK0_IP_ADDR}}
   use neighbor-group BGP-NBR-SWR-LWR-65503-00001 
   description LWR2
-
+!
 gnss-receiver 0 location 0/RP0/CPU0
   no shutdown
   frequency synchronization
@@ -652,7 +649,7 @@ gnss-receiver 0 location 0/RP0/CPU0
   anti-jam disable
   constellation GPS
   snr threshold 10
-
+!
 interface Loopback0
  description Global Routing Loopback
  ipv4 address {{SWR_LOOPBACK0_IPADDRR}} 255.255.255.255
@@ -661,35 +658,30 @@ interface Loopback1
  description SWR in-band management
  vrf VRF-OMSWR-00001
  ipv4 address {{SWR_LOOPBACK1_IPADDRR}}  255.255.255.255
-
-
+!
+!
 interface {{MPLS_NNI_PORT_ID1}}
  description {{PHY_NNI_INTF_DESCR}}
  cdp
  carrier-delay up 0 down 0
  dampening
  load-interval 30
- mtu 2070
- no ipv4 address
- vrf VRF-OMSWR-00001
- ipv4 address {{SWR_DHCP_IPADDRR}} 255.255.255.224
-
+!
+!
 interface {{MPLS_NNI_PORT_ID1}}.100 l2transport
  description Uplink_to_ML_Vlan100
  encapsulation dot1q 100
- 
+!
 interface {{MPLS_NNI_PORT_ID1}}.101 l2transport
 description Uplink_to_ML_Vlan101
  encapsulation dot1q 101
-
+!
 interface {{MPLS_NNI_PORT_ID1}}.{{P2P_L3_VLAN_ID1}}
  description {{SUBINTF1_P2PL3VLAN_DESCR}}
  ipv4 address {{P2P_WAN_IPADDR}} 255.255.255.254
  encapsulation dot1q {{P2P_L3_VLAN_ID1}}
-
-
-
-
+!
+!
 interface {{ENODEB_PORT_ID1}}
  description {{ENODE_PHY_PORT_DESCRIPTION}}
  cdp
@@ -697,40 +689,38 @@ interface {{ENODEB_PORT_ID1}}
  dampening
  load-interval 30
  mtu 2022
-
+!
 interface {{ENODEB_PORT_ID1}}.100 l2transport
  description ENODEB_VLAN100INTF_DESCR
  encapsulation dot1q 100
-
-
-
+!
+!
 interface {{ENODEB_PORT_ID1}}.101 l2transport
  description  ENODEB_VLAN101INTF_DESCR
  encapsulation dot1q 101
-
-
+!
 l2vpn
  bridge group ENODEB
   bridge-domain ENODEB-S1
-interface {{ENODEB_PORT_ID1}}.100 
+   interface {{ENODEB_PORT_ID1}}.100 
    !
-interface {{MPLS_NNI_PORT_ID1}}.100 
+   interface {{MPLS_NNI_PORT_ID1}}.100 
    !
   !
  bridge-domain ENODEB-MGMT
-interface {{ENODEB_PORT_ID1}}.101 
+   interface {{ENODEB_PORT_ID1}}.101 
    !
-interface {{MPLS_NNI_PORT_ID1}}.101 
-
-
-
-
-
+   interface {{MPLS_NNI_PORT_ID1}}.101 
+!
+!
+!
+!
+!
 performance-measurement
 interface {{MPLS_NNI_PORT_ID1}}.{{P2P_L3_VLAN_ID1}}
   next-hop ipv4 {{NEXTHOP_P2P_WAN_IPADDR}}
   delay-measurement
-
+!
 router isis SWR-ISIS
  set-overload-bit on-startup 360
  is-type level-2-only
@@ -741,7 +731,7 @@ router isis SWR-ISIS
  lsp-gen-interval maximum-wait 5000 initial-wait 1 secondary-wait 50
  lsp-refresh-interval 65000
  max-lsp-lifetime 65535
- lsp-password keychain KCH-SWRISIS-00001
+ lsp-password keychain KCH-ISIS-00001
  address-family ipv4 unicast
   metric-style wide level 2
   mpls traffic-eng level-2-only
@@ -749,12 +739,12 @@ router isis SWR-ISIS
   spf-interval maximum-wait 1000 initial-wait 1 secondary-wait 50
   segment-routing mpls
   spf prefix-priority critical tag 100
-
+!
  !
  interface Loopback0
   passive
   address-family ipv4 unicast
-   prefix-sid index 20 explicit-null
+   prefix-sid index {{L0_SRINDEX}} explicit-null
    tag 100
  !
  interface {{MPLS_NNI_PORT_ID1}}.{{P2P_L3_VLAN_ID1}}
@@ -764,16 +754,16 @@ router isis SWR-ISIS
   bfd fast-detect ipv4
   point-to-point
   hello-padding sometimes
-  hello-password keychain KCH-SWRISIS-00001
+  hello-password keychain KCH-ISIS-00001
   address-family ipv4 unicast
    fast-reroute per-prefix
    fast-reroute per-prefix ti-lfa
-
-
+!
+!
 vrf VRF-OMSWR-00001
  address-family ipv4 unicast
 !
-
+!
 router static
  vrf VRF-OMSWR-00001
   address-family ipv4 unicast

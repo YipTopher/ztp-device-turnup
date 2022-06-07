@@ -24,9 +24,9 @@ EPNM_IP = "172.16.206.66"
 EPNM_USERNAME = "copyOfCisco_AES256"
 EPNM_PASSWORD = "Abc12345"
 EPNM_CRED_POLICY = "copyOfCisco_AES256"
-ENV_FILE = "./env/profiles.json"
-ENV_PROFILE = "233-SWR-742-ZTP"
-CPNR_URL = "https://192.168.226.19:8443"
+ENV_FILE = "./env/profiles_template.json"
+ENV_PROFILE = "Profile_name"
+CPNR_URL = "https://localhost:8704"
 ZTP_SCRIPT = 'ztp-script' # ztp script name in cnc for DHCP
 
 
@@ -558,13 +558,17 @@ def create_net_id(area_code, loopback_ip):
     net_id = "49.{net_id_area}.{net_id_ip}.00".format(net_id_area = net_id_area, net_id_ip = net_id_ip)
     return net_id
 
-def dhcp_create_client(payload):
-    url = CPNR_URL + "/web-services/rest/resource/ClientEntry"
+def dhcp_create_client(payload, rest_url=None):
+    if rest_url is not None:
+       url = CPNR_URL + rest_url
+    else:
+       url = CPNR_URL + "/web-services/rest/resource/ClientEntry"
 
     headers = {
         'Authorization': 'Basic YWRtaW46Y2lzY28hMTIz',
         'Content-Type': 'application/xml'
     }
+    print(payload)
 
     try:
         response = requests.request("POST", url, headers=headers, data=payload, verify = False)
@@ -574,6 +578,7 @@ def dhcp_create_client(payload):
         log.error("Create DHCP Client Entry Failed")
         log.debug("Exception {} occurred." .format(e.__class__))
         return False
+        
 def dhcp_reload_server():
     url = CPNR_URL + "/web-services/rest/resource/DHCPServer"
 
@@ -609,6 +614,7 @@ def enable_dhcp_entries(cw_url, cw_token, devices_dict):
         
         ### iso image location 
         payloads = []
+        reservation_payloads = []
         payloads.append(
 """<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">
     <domainName>nbnzone.com</domainName>
@@ -654,8 +660,42 @@ def enable_dhcp_entries(cw_url, cw_token, devices_dict):
     <tenantId>0</tenantId>\r
 </ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], config = config))
 
+        # config exr-script
+        payloads.append(
+"""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
+    <domainName>nbnzone.com</domainName>\r
+    <embeddedPolicy>\r
+        <name>client-policy:{serial_number}-exrscript</name>\r
+        <packetFileName>http://192.168.131.233:30604/crosswork/configsvc/v1/configs/device/files/{config}</packetFileName>\r
+        <vendorOptions>\r
+            <OptionItem>\r
+                <number>43</number>\r
+                <optionDefinitionSetName>Cisco-ZTP</optionDefinitionSetName>\r
+                <value>(clientId 1 exr-config)(authCode 2 0)</value>\r
+            </OptionItem>\r
+        </vendorOptions>\r
+    </embeddedPolicy>\r
+    <hostName>{host_name}</hostName>\r
+    <name>{serial_number}-exrscript</name>\r
+    <tenantId>0</tenantId>\r
+</ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], config = config))
+
+        # Reservation payloads
+        reservation_payloads.append(
+            """<Reservation xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
+        <ipaddr>{ip_address}</ipaddr>\r
+        <lookupKey>{serial_number}</lookupKey>\r
+        <deviceName>{host_name}</deviceName>\r
+        <lookupKeyType>46</lookupKeyType>\r
+    </Reservation>""".format(ip_address = device['SWR_DHCP_IPADDRR'], serial_number = serial_number.encode('utf-8').hex(), host_name = device['Host_Name']))
+
+        
         for payload in payloads:
             dhcp_create_client(payload)
+        
+        for payload in reservation_payloads:
+            dhcp_create_client(payload, rest_url="/web-services/rest/resource/Reservation")
+
     dhcp_reload_server()
 
 
@@ -776,6 +816,8 @@ def ztp_devce_turnup(env, cw_url, cw_token, devices_dict):
         version = env['device_version']
         device_family = env['device_family']
         device['NET_ID'] = create_net_id(device['Area Code'], device['SWR_LOOPBACK0_IPADDRR'])
+        #Deriving L0_SRINDEX from loopback 0
+        device['L0_SRINDEX'] = device['SWR_LOOPBACK0_IPADDRR'].split(".")[-1]
 
         # check for serial number, if not already in list, add to list
         serial_query = check_serial_number(cw_url, cw_token, device['Serial Number'])
