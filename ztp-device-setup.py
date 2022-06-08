@@ -23,10 +23,10 @@ CROSSWORK_PORT = "30604"
 EPNM_IP = "172.16.206.66"
 EPNM_USERNAME = "copyOfCisco_AES256"
 EPNM_PASSWORD = "Abc12345"
-EPNM_CRED_POLICY = "copyOfCisco_AES256"
-ENV_FILE = "./env/profiles_template.json"
-ENV_PROFILE = "Profile_name"
-CPNR_URL = "https://localhost:8704"
+EPNM_CRED_POLICY = "epnm_cre"
+ENV_FILE = "./env/profiles.json"
+ENV_PROFILE = "233-SWR-742-ZTP"
+CPNR_URL = "https://localhost:8443"
 ZTP_SCRIPT = 'ztp-script' # ztp script name in cnc for DHCP
 
 
@@ -63,7 +63,7 @@ log.setLevel(logging.DEBUG)
 log.addHandler(console_handler)
 
 def read_env_properties(filename, profile_name):
-    # Read Env properties with profile selection and validation
+    ''' Read Env properties with profile selection and validation '''
     try:
         properties_file = open(filename, "r")
         properties_data = json.load(properties_file)
@@ -99,8 +99,11 @@ def read_env_properties(filename, profile_name):
 
     return response
 
+# def verify_devices_input(devices_dict): - to do
+
+
 def generate_ticket(cw_url, cw_user, cw_pass):
-    # Generate Crosswork ticket
+    ''' Generate Crosswork ticket '''
     url = cw_url + '/crosswork/sso/v1/tickets'
     params = {'username': cw_user, 'password': cw_pass}
     payload = ""
@@ -124,7 +127,7 @@ def generate_ticket(cw_url, cw_user, cw_pass):
 
 
 def generate_token(cw_url, ticket):
-    # Generate Crosswork token
+    ''' Generate Crosswork token '''
     url = cw_url + "/crosswork/sso/v1/tickets/" + ticket
     payload='service=https%3A%2F%2F172.23.193.107%3A30603%2Fapp-dashboard'
     headers = {
@@ -145,10 +148,10 @@ def generate_token(cw_url, ticket):
 
 
 def create_config_from_template(filename, template, data):
-    # Create a config file from config file template
+    ''' Create a config file from config file template '''
     try:
         f = open(filename, "w")
-        f.write(template.render(data))
+        f.write(template.render(data)) # Jinja2 Template 
         f.close
         
         print("Config File created at: {}" .format(filename))
@@ -160,8 +163,9 @@ def create_config_from_template(filename, template, data):
 
 
 def check_serial_number(cw_url, token, serial_number):
-    # Query device serial number in crossworks. Return True if serial number exists.
+    ''' Query device serial number in crossworks. Return serial number if exist. '''
     url = cw_url + '/crosswork/ztp/v1/serialnumbers/query'
+
     headers = {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + token
@@ -171,6 +175,7 @@ def check_serial_number(cw_url, token, serial_number):
             "serialNumber": "*" + serial_number
         }
     })
+
     try:
         response = requests.request("POST", url, headers=headers, data=payload, verify=False)
         if 'data' in response.json():
@@ -186,7 +191,7 @@ def check_serial_number(cw_url, token, serial_number):
     return False
 
 def add_serial_number(cw_url, token, serial_number):
-    # Add serial number
+    ''' Add serial number '''
     url = cw_url + '/crosswork/ztp/v1/serialnumbers'
     headers = {
         'Content-Type': 'application/json',
@@ -218,22 +223,16 @@ def add_ownership_voucher(cw_url, token, file_name, vouchers_path):
             encoded_string = base64.b64encode(voucher.read())
             encoded_string = encoded_string.decode('utf-8')
 
-    except Exception as e:
-        log.error("Upload Ownership Voucher: {} failed!".format(file_name))
-        log.debug("Exception {} occurred." .format(e.__class__))
-        return False
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+        payload = json.dumps({
+            "b64Content": encoded_string,
+            "fileName": file_name,
+            "isOverwrite": "false"
+        })
 
-    headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-    }
-    payload = json.dumps({
-        "b64Content": encoded_string,
-        "fileName": file_name,
-        "isOverwrite": "false"
-    })
-
-    try:
         response = requests.request("POST", url, headers=headers, data=payload, verify=False)
         print("Ownership Voucher Uploaded: " + file_name)
         return True
@@ -403,7 +402,7 @@ def check_for_ztp_device(cw_url, token, host_name, serial_number):
             if ztp_nodes:
                 for node in ztp_nodes:
                     if serial_number in node['serialNumber']:
-                        return node['uuid']
+                        return node
         return False
     except Exception as e:
         log.error("ZTP Device query failed!")
@@ -438,6 +437,37 @@ def add_ztp_device_to_csv(writer, os_platform, serial_number, host_name, credent
         writer.writerow(data)
     except Exception as e:
         log.error("Writing ZTP device in CSV: {} failed!".format(host_name))
+        log.debug("Exception {} occurred." .format(e.__class__))
+
+def import_devices_csv(cw_url, token, ztp_devices_csv):
+    # import ZTP devices CSV to CNC
+    url = cw_url + '/crosswork/ztp/v1/devices/import'
+
+    try:
+        with open(ztp_devices_csv, "rb") as voucher:
+            # base 64 encoding of the csv for payload
+            encoded_string = base64.b64encode(voucher.read())
+            encoded_string = encoded_string.decode('utf-8')
+
+        print(encoded_string)
+        headers = {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        }
+        payload = json.dumps({
+            "b64Content": encoded_string,
+            "isDryRun": False
+        })
+
+        response = requests.request("POST", url, headers=headers, data=payload, verify=False)
+        if response.json()['code'] == 200:
+            print(str(response.json()['code']) + ": ZTP Devices Created in CNC")
+        elif "message" in response.json():
+            print(response.json()['message'])
+        else:
+            print(response.text)
+    except Exception as e:
+        log.error("Failed to Import Devices CSV: {}".format(ztp_devices_csv))
         log.debug("Exception {} occurred." .format(e.__class__))
 
 def create_ztp_device(cw_url, token, os_platform, serial_number, host_name, credential_profile, uuid = '', is_secure_ztp = 'false', 
@@ -578,7 +608,7 @@ def dhcp_create_client(payload, rest_url=None):
         log.error("Create DHCP Client Entry Failed")
         log.debug("Exception {} occurred." .format(e.__class__))
         return False
-        
+
 def dhcp_reload_server():
     url = CPNR_URL + "/web-services/rest/resource/DHCPServer"
 
@@ -615,79 +645,74 @@ def enable_dhcp_entries(cw_url, cw_token, devices_dict):
         ### iso image location 
         payloads = []
         reservation_payloads = []
-        payloads.append(
-"""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">
-    <domainName>nbnzone.com</domainName>
-    <embeddedPolicy>
-        <name>client-policy:{serial_number}-iso</name>
-        <packetFileName>http://192.168.131.233:30604/crosswork/imagesvc/v1/device/files/{image}</packetFileName>
-    </embeddedPolicy>
-    <hostName>{host_name}</hostName>
-    <name>{serial_number}-iso</name>
-    <tenantId>0</tenantId>
-</ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], image = image))
+        payloads.append("""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">
+            <domainName>nbnzone.com</domainName>
+            <embeddedPolicy>
+                <name>client-policy:{serial_number}-iso</name>
+                <packetFileName>http://192.168.131.233:30604/crosswork/imagesvc/v1/device/files/{image}</packetFileName>
+            </embeddedPolicy>
+            <hostName>{host_name}</hostName>
+            <name>{serial_number}-iso</name>
+            <tenantId>0</tenantId>
+        </ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], image = image))
 
         # iso ipxe
-        payloads.append(
-"""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
-    <domainName>nbnzone.com</domainName>\r
-    <embeddedPolicy>\r
-        <name>client-policy:{serial_number}-iso-ipxe</name>\r
-        <packetFileName>http://192.168.131.233:30604/crosswork/imagesvc/v1/device/files/{image}</packetFileName>\r
-    </embeddedPolicy>\r
-    <hostName>{host_name}</hostName>\r
-    <name>{serial_number}-iso-ipxe</name>\r
-    <tenantId>0</tenantId>\r
-</ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], image = image))
+        payloads.append("""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
+            <domainName>nbnzone.com</domainName>\r
+            <embeddedPolicy>\r
+                <name>client-policy:{serial_number}-iso-ipxe</name>\r
+                <packetFileName>http://192.168.131.233:30604/crosswork/imagesvc/v1/device/files/{image}</packetFileName>\r
+            </embeddedPolicy>\r
+            <hostName>{host_name}</hostName>\r
+            <name>{serial_number}-iso-ipxe</name>\r
+            <tenantId>0</tenantId>\r
+        </ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], image = image))
 
         # config script
-        payloads.append(
-"""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
-    <domainName>nbnzone.com</domainName>\r
-    <embeddedPolicy>\r
-        <name>client-policy:{serial_number}-script</name>\r
-        <packetFileName>http://192.168.131.233:30604/crosswork/configsvc/v1/configs/device/files/{config}</packetFileName>\r
-        <vendorOptions>\r
-            <OptionItem>\r
-                <number>43</number>\r
-                <optionDefinitionSetName>Cisco-ZTP</optionDefinitionSetName>\r
-                <value>(clientId 1 xr-config)(authCode 2 0)</value>\r
-            </OptionItem>\r
-        </vendorOptions>\r
-    </embeddedPolicy>\r
-    <hostName>{host_name}</hostName>\r
-    <name>{serial_number}-script</name>\r
-    <tenantId>0</tenantId>\r
-</ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], config = config))
+        payloads.append("""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
+            <domainName>nbnzone.com</domainName>\r
+            <embeddedPolicy>\r
+                <name>client-policy:{serial_number}-script</name>\r
+                <packetFileName>http://192.168.131.233:30604/crosswork/configsvc/v1/configs/device/files/{config}</packetFileName>\r
+                <vendorOptions>\r
+                    <OptionItem>\r
+                        <number>43</number>\r
+                        <optionDefinitionSetName>Cisco-ZTP</optionDefinitionSetName>\r
+                        <value>(clientId 1 xr-config)(authCode 2 0)</value>\r
+                    </OptionItem>\r
+                </vendorOptions>\r
+            </embeddedPolicy>\r
+            <hostName>{host_name}</hostName>\r
+            <name>{serial_number}-script</name>\r
+            <tenantId>0</tenantId>\r
+        </ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], config = config))
 
         # config exr-script
-        payloads.append(
-"""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
-    <domainName>nbnzone.com</domainName>\r
-    <embeddedPolicy>\r
-        <name>client-policy:{serial_number}-exrscript</name>\r
-        <packetFileName>http://192.168.131.233:30604/crosswork/configsvc/v1/configs/device/files/{config}</packetFileName>\r
-        <vendorOptions>\r
-            <OptionItem>\r
-                <number>43</number>\r
-                <optionDefinitionSetName>Cisco-ZTP</optionDefinitionSetName>\r
-                <value>(clientId 1 exr-config)(authCode 2 0)</value>\r
-            </OptionItem>\r
-        </vendorOptions>\r
-    </embeddedPolicy>\r
-    <hostName>{host_name}</hostName>\r
-    <name>{serial_number}-exrscript</name>\r
-    <tenantId>0</tenantId>\r
-</ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], config = config))
+        payloads.append("""<ClientEntry xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
+            <domainName>nbnzone.com</domainName>\r
+            <embeddedPolicy>\r
+                <name>client-policy:{serial_number}-exrscript</name>\r
+                <packetFileName>http://192.168.131.233:30604/crosswork/configsvc/v1/configs/device/files/{config}</packetFileName>\r
+                <vendorOptions>\r
+                    <OptionItem>\r
+                        <number>43</number>\r
+                        <optionDefinitionSetName>Cisco-ZTP</optionDefinitionSetName>\r
+                        <value>(clientId 1 exr-config)(authCode 2 0)</value>\r
+                    </OptionItem>\r
+                </vendorOptions>\r
+            </embeddedPolicy>\r
+            <hostName>{host_name}</hostName>\r
+            <name>{serial_number}-exrscript</name>\r
+            <tenantId>0</tenantId>\r
+        </ClientEntry>""".format(serial_number = serial_number, host_name = device['Host_Name'], config = config))
 
         # Reservation payloads
-        reservation_payloads.append(
-            """<Reservation xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
-        <ipaddr>{ip_address}</ipaddr>\r
-        <lookupKey>{serial_number}</lookupKey>\r
-        <deviceName>{host_name}</deviceName>\r
-        <lookupKeyType>46</lookupKeyType>\r
-    </Reservation>""".format(ip_address = device['SWR_DHCP_IPADDRR'], serial_number = serial_number.encode('utf-8').hex(), host_name = device['Host_Name']))
+        reservation_payloads.append("""<Reservation xmlns=\"http://ws.cnr.cisco.com/xsd\">\r
+            <ipaddr>{ip_address}</ipaddr>\r
+            <lookupKey>{serial_number}</lookupKey>\r
+            <deviceName>{host_name}</deviceName>\r
+            <lookupKeyType>7</lookupKeyType>\r
+        </Reservation>""".format(ip_address = device['SWR_DHCP_IPADDRR'], serial_number = serial_number.encode('utf-8').hex(), host_name = device['Host_Name']))
 
         
         for payload in payloads:
@@ -702,7 +727,8 @@ def enable_dhcp_entries(cw_url, cw_token, devices_dict):
 def show_ztp_process(env, cw_url, cw_token, devices_dict):
     # Show ZTP Device turn-up process in setps
     config_template_loc = env['config_template_file']
-    
+    create_devices = True
+
     # Print the files and batch id used.
     print("\nShow ZTP Device Turn-Up process")
     print("\nConfig file Template: " + config_template_loc)
@@ -726,10 +752,15 @@ def show_ztp_process(env, cw_url, cw_token, devices_dict):
         print("Serial Number: " + device['Serial Number'])
 
         # Check if Device exists - this device will not be created in the ZTP Device Turn-Up process.
-        device_uuid = check_for_ztp_device(cw_url, cw_token, host_name, device['Serial Number'])
-        if (device_uuid):
-            print("\nZTP Device will not be created - ZTP Device with Serial Number already exists with UUID: " + str(device_uuid))
-            print("\n-------------------------------------------------------------------------")
+        ztp_device = check_for_ztp_device(cw_url, cw_token, host_name, device['Serial Number'])
+        if (ztp_device):
+            if ztp_device['status'] == 'Unprovisioned':
+                print("\nZTP Device will be updated - ZTP Device with Serial Number already exists with UUID: " + str(ztp_device['uuid']))
+                print("\n-------------------------------------------------------------------------")
+            else:
+                print("\nZTP Device will not be created - ZTP Device with serial number already exists with UUID: {} \nDevice status: {}".format(str(ztp_device['uuid']), ztp_device['status']))
+                print("\n-------------------------------------------------------------------------")
+            create_devices = False
             continue
 
         # Check device serial number
@@ -771,7 +802,7 @@ def show_ztp_process(env, cw_url, cw_token, devices_dict):
 
         print("\n-------------------------------------------------------------------------")
 
-    return True
+    return create_devices
 
 def ztp_devce_turnup(env, cw_url, cw_token, devices_dict):
     config_template_loc = env['config_template_file']
@@ -920,12 +951,14 @@ def ztp_devce_turnup(env, cw_url, cw_token, devices_dict):
                             connectivity_protocol = connectivity_protocol, connectivity_ip_address = connectivity_ip_address, connectivity_port = connectivity_port,
                             connectivity_timeout = connectivity_timeout, config_attributes = config_attributes)
             ztp_devices_csv.close()
-
-        # Create device if device creation selected
-        # if (args.device_creation):
             
-
         # Create Groups and Tags for device - todo
+
+
+    # Create device if device creation selected
+    if (args.device_creation):
+        import_devices_csv(cw_url, cw_token, output)
+
 
 def main(env, devices_dict):
 
@@ -968,6 +1001,7 @@ if __name__ == '__main__':
         devices_dict = concat((x.query("Batch == '{}'".format(args.batch)) for x in devices_csv), ignore_index=True).to_dict(orient='records')
 
         if devices_dict:
+            # verify_devices_input(devices_dict)
             main(env, devices_dict)
         else:
             log.error("Batch ID error - No Devices with batch ID: " + args.batch)

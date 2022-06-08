@@ -407,7 +407,7 @@ sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/nodes/node/ccm-learning-databases
 sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/global-configuration-errors/global-configuration-error
 sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/mep-configuration-errors/mep-configuration-error
 sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/local-meps/local-mep
-sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/peer-me-pv2s/peer-me-pv2 
+sensor-path Cisco-IOS-XR-ethernet-cfm-oper:cfm/global/peer-me-pv2s/peer-me-pv2
 !
 sensor-group SENSORGRP_MPLS
 sensor-path Cisco-IOS-XR-mpls-te-oper:mpls-te/segment-routing/srigp-area-infos/srigp-area-info
@@ -486,7 +486,7 @@ sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/neighbors/details/detail
 sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/neighbors/devices/device
 sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/neighbors/summaries/summary
 sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/statistics
-sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/interfaces/interface 
+sensor-path Cisco-IOS-XR-cdp-oper:cdp/nodes/node/interfaces/interface
 !
 sensor-group SENSORGRP_EVPN
 sensor-path Cisco-IOS-XR-evpn-oper:evpn/nodes/node/evpn-groups/evpn-group
@@ -592,7 +592,7 @@ end-policy
 route-policy RMP-PASS-OUT-00001
   pass
 end-policy
-
+!
 route-policy RMP-CONNECTED-SWR_L1
   if destination in PFL-CONNECTED-TO-BGP-L1-SWR then
     pass
@@ -626,8 +626,8 @@ router bgp 65503
   dscp cs7
   address-family vpnv4 unicast
    route-policy RMP-PASS-IN-00001 in
-   maximum-prefix 524288 75 warning-only
    route-policy RMP-PASS-OUT-00001 out
+   maximum-prefix 524288 75 warning-only
 !
 !
   address-family l2vpn evpn
@@ -666,6 +666,7 @@ interface {{MPLS_NNI_PORT_ID1}}
  carrier-delay up 0 down 0
  dampening
  load-interval 30
+ no shut
 !
 !
 interface {{MPLS_NNI_PORT_ID1}}.100 l2transport
@@ -689,6 +690,7 @@ interface {{ENODEB_PORT_ID1}}
  dampening
  load-interval 30
  mtu 2022
+ no shut
 !
 interface {{ENODEB_PORT_ID1}}.100 l2transport
  description ENODEB_VLAN100INTF_DESCR
@@ -717,9 +719,10 @@ l2vpn
 !
 !
 performance-measurement
-interface {{MPLS_NNI_PORT_ID1}}.{{P2P_L3_VLAN_ID1}}
+  interface {{MPLS_NNI_PORT_ID1}}.{{P2P_L3_VLAN_ID1}}
   next-hop ipv4 {{NEXTHOP_P2P_WAN_IPADDR}}
   delay-measurement
+!
 !
 router isis SWR-ISIS
  set-overload-bit on-startup 360
@@ -760,10 +763,6 @@ router isis SWR-ISIS
    fast-reroute per-prefix ti-lfa
 !
 !
-vrf VRF-OMSWR-00001
- address-family ipv4 unicast
-!
-!
 router static
  vrf VRF-OMSWR-00001
   address-family ipv4 unicast
@@ -771,3 +770,7 @@ router static
   !
  !
 !
+root
+vrf VRF-OMSWR-00001
+ address-family ipv4 unicast
+ !
