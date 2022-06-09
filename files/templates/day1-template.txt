@@ -131,6 +131,7 @@ end-set
 !
 ipv4 access-list ACL-SNMP-RO-00001
  10  permit ipv4 172.16.206.0/24 host {{SWR_LOOPBACK1_IPADDRR}}
+ 15 permit ipv4 192.168.226.0 0.0.0.255 host {{SWR_LOOPBACK1_IPADDRR}}
 !
 !
 prefix-set PFL-CONNECTED-TO-BGP-L1-SWR

@@ -35,7 +35,7 @@ parser = argparse.ArgumentParser(description='Crossworks ZTP Device Setup progra
 
 parser.add_argument('-batch', help="Generate ZTP Devices by batch id", type=str, required=True)
 parser.add_argument('--create', help="Run ZTP Device turn-up process for batch id", action=argparse.BooleanOptionalAction, default=False)
-parser.add_argument('--device_creation', help="Add ZTP Device into CNC", action=argparse.BooleanOptionalAction, default=False)
+parser.add_argument('--create_devices', help="Add ZTP Device into CNC", action=argparse.BooleanOptionalAction, default=False)
 parser.add_argument('--enable', help="Create DHCP entries in CPNR", action=argparse.BooleanOptionalAction, default=False)
 parser.add_argument('--show_process', help="Show the ZTP Device turn-up process", action=argparse.BooleanOptionalAction, default=True)
 parser.add_argument('--use_profiles', help="Use ZTP Profiles for each device", action=argparse.BooleanOptionalAction, default=False)
@@ -956,7 +956,7 @@ def ztp_devce_turnup(env, cw_url, cw_token, devices_dict):
 
 
     # Create device if device creation selected
-    if (args.device_creation):
+    if (args.create_devices):
         import_devices_csv(cw_url, cw_token, output)
 
 
